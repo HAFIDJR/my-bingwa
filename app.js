@@ -12,7 +12,9 @@ app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 
 app.use(router);
-
+app.get("/", (req, res) => {
+  console.log("hello world");
+});
 // 404 error handling
 app.use((req, res, next) => {
   res.status(404).json({
