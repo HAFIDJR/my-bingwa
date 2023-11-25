@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           Int            @id @default(autoincrement())
+  email        String         @unique
+  password     String
+  otp          String
+  isVerified   Boolean        @default(false)
+  role         String         @default("user")
+  userProfile  UserProfile?
+  notification Notification[]
+}
+
+model UserProfile {
+  id             Int     @id @default(autoincrement())
+  profilePicture String?
+  fullName       String?
+  phoneNumber    String?
+  city           String?
+  country        String?
+  userId         Int     @unique
+  user           User    @relation(fields: [userId], references: [id])
+}
+
+model Category {
+  id           Int      @id @default(autoincrement())
+  categoryName String   @unique
+  course       Course[]
+}
+
+model Course {
+  id               Int        @id @default(autoincrement())
+  courseName       String
+  price            Int
+  rating           Int
+  level            String
+  aboutCourse      String
+  targetAudience   String
+  learningMaterial String
+  creator          String
+  isPaid           Boolean
+  linkVidio        String
+  linkForum        String
+  duration         String
+  release          DateTime   @default(now())
+  Category         Category?  @relation(fields: [categoryId], references: [id])
+  categoryId       Int?
+  Promotion        Promotion? @relation(fields: [promotionId], references: [id])
+  promotionId      Int?
+}
+
+model Promotion {
+  id        Int       @id @default(autoincrement())
+  discount  Decimal
+  startDate DateTime?
+  endDate   DateTime?
+  course    Course[]
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+}

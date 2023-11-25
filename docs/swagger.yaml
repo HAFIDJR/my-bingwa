@@ -1,0 +1,566 @@
+openapi: 3.0.3
+info:
+  title: final-project-b11
+  description: |-
+    MOOC (Massive Open Online Course) app is a versatile online learning platform that offers open and extensive access to a diverse range of courses. Users can choose from high-quality courses taught by expert instructors from top educational institutions worldwide. The app provides flexible, affordable, and accessible learning experiences, allowing users to study at their own pace and convenience.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+tags:
+  - name: Users
+    description: Operations related to users
+  - name: UserProfiles
+    description: Operations related to users
+paths:
+  /users/register:
+    post:
+      tags:
+        - Users
+      operationId: post-register-user
+      summary: Register user
+      description: Register user with the provided information.
+      requestBody:
+        $ref: "#/components/requestBodies/Register"
+      responses:
+        "201":
+          description: User registration was successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          newUser:
+                            $ref: "#/components/schemas/UserModel"
+                          newUserProfile:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 1
+                              profilePicture:
+                                type: string
+                                example: null
+                              fullName:
+                                type: string
+                                example: "Budi Cahyono"
+                              phoneNumber:
+                                type: string
+                                example: "08123456789"
+                              city:
+                                type: string
+                                example: null
+                              country:
+                                type: string
+                                example: null
+                              userId:
+                                type: integer
+                                example: 1
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+  /users/login:
+    post:
+      tags:
+        - Users
+      operationId: post-login-user
+      summary: Login user
+      description: Login user with the provided information.
+      requestBody:
+        $ref: "#/components/requestBodies/Login"
+      responses:
+        "200":
+          description: User Login was successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 1
+                              email:
+                                type: string
+                                example: "budi@mail.com"
+                              password:
+                                type: string
+                                example: "$2b$10$wpqr1W8aUNCN7BZZ3o6sz.meX9rB/aItp5Mw/0q7GaRmJbsU2GGbK"
+                              otp:
+                                type: string
+                                example: "012345"
+                              isVerified:
+                                type: boolean
+                                example: true
+                              role:
+                                type: string
+                                example: "user"
+                          token:
+                            type: string
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjk4Njk0MzI1fQ.mexfgD-aW24iYvoWYWQJWSv7AbJ5EqyIDrHS6iCk-d0"
+        "401":
+          description: invalid email or password!
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+        "403":
+          description: Account not verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+  /users/verify-otp:
+    put:
+      tags:
+        - Users
+      operationId: put-verify-otp-user
+      summary: Verify otp user
+      description: Verify otp user
+      requestBody:
+        $ref: "#/components/requestBodies/VerifyOtp"
+      responses:
+        "200":
+          description: Verify otp user was successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 1
+                              email:
+                                type: string
+                                example: "budi@mail.com"
+                              password:
+                                type: string
+                                example: "$2b$10$wpqr1W8aUNCN7BZZ3o6sz.meX9rB/aItp5Mw/0q7GaRmJbsU2GGbK"
+                              otp:
+                                type: string
+                                example: "012345"
+                              isVerified:
+                                type: boolean
+                                example: true
+                              role:
+                                type: string
+                                example: "user"
+        "401":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+  /users/resend-otp:
+    put:
+      tags:
+        - Users
+      operationId: put-resend-otp-user
+      summary: Resend otp user
+      description: Resend otp user
+      requestBody:
+        $ref: "#/components/requestBodies/ResendOtp"
+      responses:
+        "200":
+          description: Resend otp user was successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserModel"
+  /users/forget-password:
+    post:
+      tags:
+        - Users
+      operationId: post-forget-password-user
+      summary: Forget Password user
+      description: Forget Password user
+      requestBody:
+        $ref: "#/components/requestBodies/ForgetPassword"
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserModel"
+        "404":
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+  /users/update-password:
+    put:
+      tags:
+        - Users
+      operationId: put-update-password-user
+      summary: Update password user
+      description: Update password user
+      parameters:
+        - name: token
+          in: query
+          description: token for update password
+          required: true
+          schema:
+            type: string
+      requestBody:
+        $ref: "#/components/requestBodies/UpdatePassword"
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          updatedUser:
+                            $ref: "#/components/schemas/UserModel"
+                          newNotification:
+                            $ref: "#/components/schemas/NotificationModel"
+        "400":
+          description: The password and password confirmation fields must match
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Please ensure that the password and password confirmation match!"
+  /users/authenticate:
+    get:
+      tags:
+        - Users
+      operationId: get-user-by-authenticate
+      summary: Get user by authenticate
+      description: Get user by authenticate
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserModel"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+  /user-profiles/update-profile:
+    put:
+      tags:
+        - UserProfiles
+      operationId: put-edit-user-by-authenticate
+      summary: Put Edit User By Authenticate
+      description: Put Edit User By Authenticate
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateProfile"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          newUserProfile:
+                            $ref: "#/components/schemas/UserProfileModel"
+components:
+  schemas:
+    BasicResponse:
+      title: BasicResponse
+      type: object
+      properties:
+        status:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "success"
+    UserModel:
+      title: User
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: "budi@mail.com"
+        password:
+          type: string
+          example: "$2b$10$wpqr1W8aUNCN7BZZ3o6sz.meX9rB/aItp5Mw/0q7GaRmJbsU2GGbK"
+        otp:
+          type: string
+          example: "012345"
+        isVerified:
+          type: boolean
+          example: false
+        role:
+          type: string
+          example: "user"
+    UserProfileModel:
+      title: User Profile
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        profilePicture:
+          type: string
+          example: "https://ik.imagekit.io/budi123/1628693262177_a8Y3AhxNv.png"
+        fullName:
+          type: string
+          example: "Budi Cahyono"
+        phoneNumber:
+          type: string
+          example: "08123456789"
+        city:
+          type: string
+          example: "Vancouver"
+        country:
+          type: string
+          example: "Canada"
+        userId:
+          type: integer
+          example: 1
+    NotificationModel:
+      title: User Profile
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "Notification"
+        message:
+          type: string
+          example: "Password successfully updated!"
+        isRead:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          example: "2023-11-24T01:11:59.133Z"
+        userId:
+          type: integer
+          example: 1
+  requestBodies:
+    Register:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              fullName:
+                type: string
+                example: "Budi Cahyono"
+              email:
+                type: string
+                example: "budi@mail.com"
+              phoneNumber:
+                type: string
+                example: "08123456789"
+              password:
+                type: string
+                example: "123456"
+    Login:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                example: "budi@mail.com"
+              password:
+                type: string
+                example: "123456"
+    VerifyOtp:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                example: "budi@mail.com"
+              otp:
+                type: string
+                example: "012345"
+    ResendOtp:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                example: "budi@mail.com"
+    ForgetPassword:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                example: "budi@mail.com"
+    UpdatePassword:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              password:
+                type: string
+                example: "123456"
+              passwordConfirmation:
+                type: string
+                example: "123456"
+    UpdateProfile:
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              image:
+                type: string
+                format: binary
+              fullName:
+                type: string
+                example: "Budi Cahyono"
+              phoneNumber:
+                type: string
+                example: "08123456789"
+              city:
+                type: string
+                example: "Vancouver"
+              country:
+                type: string
+                example: "Canada"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
