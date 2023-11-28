@@ -24,4 +24,5 @@ router.use("/api/v1/courses", Course);
 router.use("/api/v1/chapters", Chapter);
 router.use("/api/v1/lessons", Lesson);
 
+
 module.exports = router;
