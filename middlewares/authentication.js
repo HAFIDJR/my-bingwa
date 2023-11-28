@@ -27,6 +27,14 @@ module.exports = function (req, res, next) {
     }
 
     req.user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    if (!req.user) {
+      return res.status(401).json({
+        status: false,
+        message: "unauthenticated",
+        err: "email is not register",
+        data: null,
+      });
+    }
     if (!req.user.isVerified) {
       return res.status(401).json({
         status: false,

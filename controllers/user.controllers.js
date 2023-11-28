@@ -58,10 +58,12 @@ module.exports = {
 
   login: async (req, res, next) => {
     try {
-      let { email, password } = req.body;
+      let { emailOrPhoneNumber, password } = req.body;
 
-      const user = await prisma.user.findUnique({
-        where: { email },
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: emailOrPhoneNumber }, { userProfile: { phoneNumber: emailOrPhoneNumber } }],
+        },
       });
 
       if (!user) {
@@ -267,7 +269,56 @@ module.exports = {
         data: { user },
       });
     } catch (err) {
-      console.error(err);
+      next(err);
+    }
+  },
+
+  changePasswordUser: async (req, res, next) => {
+    try {
+      const { oldPassword, newPassword, newPasswordConfirmation } = req.body;
+
+      let isOldPasswordCorrect = await bcrypt.compare(
+        oldPassword,
+        req.user.password
+      );
+      if (!isOldPasswordCorrect) {
+        return res.status(401).json({
+          status: false,
+          message: "Incorrect old password",
+          data: null,
+        });
+      }
+
+      if (newPassword !== newPasswordConfirmation) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "Please ensure that the new password and confirmation match!",
+          data: null,
+        });
+      }
+
+      let encryptedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      let updateUser = await prisma.user.update({
+        where: { id: Number(req.user.id) },
+        data: { password: encryptedNewPassword },
+      });
+
+      let newNotification = await prisma.notification.create({
+        data: {
+          title: "Notification",
+          message: "Password successfully changed!",
+          userId: req.user.id,
+        },
+      });
+
+      res.status(200).json({
+        status: true,
+        message: "Your password has been successfully changed",
+        data: { updateUser, newNotification },
+      });
+    } catch (err) {
       next(err);
     }
   },

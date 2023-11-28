@@ -3,12 +3,13 @@
 
 generator client {
   provider = "prisma-client-js"
+  // binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -25,8 +26,8 @@ model User {
 model UserProfile {
   id             Int     @id @default(autoincrement())
   profilePicture String?
-  fullName       String?
-  phoneNumber    String?
+  fullName       String
+  phoneNumber    String  @unique
   city           String?
   country        String?
   userId         Int     @unique
@@ -48,16 +49,37 @@ model Course {
   aboutCourse      String
   targetAudience   String
   learningMaterial String
-  creator          String
-  isPaid           Boolean
-  linkVidio        String
-  linkForum        String
+  mentor           String
+  isPremium        Boolean
+  videoURL         String
+  forumURL         String
   duration         String
   release          DateTime   @default(now())
-  Category         Category?  @relation(fields: [categoryId], references: [id])
-  categoryId       Int?
-  Promotion        Promotion? @relation(fields: [promotionId], references: [id])
+  lesson           Lesson[]
+  categoryId       Int
+  category         Category   @relation(fields: [categoryId], references: [id])
   promotionId      Int?
+  promotion        Promotion? @relation(fields: [promotionId], references: [id])
+  createdAt        DateTime   @default(now())
+}
+
+model Chapter {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  lesson    Lesson[]
+}
+
+model Lesson {
+  id         Int      @id @default(autoincrement())
+  lessonName String
+  videoURL   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+  chapterId  Int
+  chapter    Chapter  @relation(fields: [chapterId], references: [id])
+  Course     Course?  @relation(fields: [courseId], references: [id])
+  courseId   Int?
 }
 
 model Promotion {
