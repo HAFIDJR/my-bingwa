@@ -3,7 +3,7 @@ const express = require("express");
 const app = express();
 const morgan = require("morgan");
 const cors = require("cors");
-const { PORT} = process.env;
+const { PORT = 3000 } = process.env;
 const router = require("./routes");
 
 app.use(cors());
@@ -15,7 +15,6 @@ app.get("/", (req, res) => {
   res.send("Welcome To Bingwa API ");
 });
 app.use(router);
-
 
 // 404 error handling
 app.use((req, res, next) => {
@@ -34,7 +33,6 @@ app.use((err, req, res, next) => {
     data: null,
   });
 });
-
 
 app.listen(PORT, () =>
   console.log(`server running at http://localhost:${PORT}`)

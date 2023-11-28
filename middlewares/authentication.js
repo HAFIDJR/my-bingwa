@@ -26,7 +26,12 @@ module.exports = function (req, res, next) {
       });
     }
 
-    req.user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    try {
+      req.user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    } catch (err) {
+      next(err);
+    }
+
     if (!req.user) {
       return res.status(401).json({
         status: false,
