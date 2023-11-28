@@ -13,6 +13,9 @@ app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 app.use(router);
 
+app.get("/", (req, res) => {
+  res.send("Welcome To Bingwa API");
+});
 // 404 error handling
 app.use((req, res, next) => {
   res.status(404).json({
