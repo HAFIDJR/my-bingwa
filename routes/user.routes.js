@@ -12,4 +12,5 @@ router.put("/update-password", updatePasswordUser);
 router.get("/authenticate", Auth, checkRole(["user", "admin"]), authenticateUser);
 router.put("/change-password", Auth, checkRole(["user", "admin"]), changePasswordUser);
 
+
 module.exports = router;
