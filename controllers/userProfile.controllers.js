@@ -11,6 +11,24 @@ module.exports = {
       const file = req.file;
       let imageURL;
 
+      if (phoneNumber) {
+        if (!/^\d+$/.test(phoneNumber)) {
+          return res.status(400).json({
+            status: false,
+            message: "Invalid phone number format. It must contain only numeric characters.",
+            data: null,
+          });
+        }
+
+        if (phoneNumber.length < 10 || phoneNumber.length > 12) {
+          return res.status(400).json({
+            status: false,
+            message: "Invalid phone number length. It must be between 10 and 12 characters.",
+            data: null,
+          });
+        }
+      }
+
       if (file) {
         const strFile = file.buffer.toString("base64");
 

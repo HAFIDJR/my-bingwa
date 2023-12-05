@@ -11,16 +11,13 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
-app.get("/", (req, res) => {
-  res.send("Welcome To Bingwa API ");
-});
 app.use(router);
 
 // 404 error handling
 app.use((req, res, next) => {
   res.status(404).json({
     status: false,
-    message: "Bad Request",
+    message:"Bad Request",
     data: null,
   });
 });
@@ -29,7 +26,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   res.status(500).json({
     status: false,
-    message: err.message || "Internal Server Error",
+    message: err.message ?? "Internal Server Error",
     data: null,
   });
 });

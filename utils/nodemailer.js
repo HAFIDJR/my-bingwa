@@ -21,6 +21,7 @@ module.exports = {
 
     const transport = nodemailer.createTransport({
       service: "gmail",
+      port:465,
       auth: {
         type: "OAuth2",
         user: GOOGLE_SENDER_EMAIL,

@@ -2,13 +2,13 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  // binaryTargets = ["native", "rhel-openssl-1.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -17,10 +17,13 @@ model User {
   email        String         @unique
   password     String
   otp          String
+  otpCreatedAt DateTime
   isVerified   Boolean        @default(false)
   role         String         @default("user")
+  courses      Course[]       @relation("UserToCourse")
   userProfile  UserProfile?
   notification Notification[]
+  enrollment   Enrollment[]
 }
 
 model UserProfile {
@@ -41,10 +44,10 @@ model Category {
 }
 
 model Course {
-  id               Int        @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   courseName       String
   price            Int
-  rating           Int
+  averageRating    Decimal?
   level            String
   aboutCourse      String
   targetAudience   String
@@ -54,19 +57,22 @@ model Course {
   videoURL         String
   forumURL         String
   duration         String
-  release          DateTime   @default(now())
-  lesson           Lesson[]
+  chapter          Chapter[]
+  enrollment       Enrollment[]
+  user             User[]       @relation("UserToCourse")
+  createdAt        DateTime     @default(now())
   categoryId       Int
-  category         Category   @relation(fields: [categoryId], references: [id])
+  category         Category     @relation(fields: [categoryId], references: [id])
   promotionId      Int?
-  promotion        Promotion? @relation(fields: [promotionId], references: [id])
-  createdAt        DateTime   @default(now())
+  promotion        Promotion?   @relation(fields: [promotionId], references: [id])
 }
 
 model Chapter {
   id        Int      @id @default(autoincrement())
   name      String
   createdAt DateTime @default(now())
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id])
   lesson    Lesson[]
 }
 
@@ -78,15 +84,13 @@ model Lesson {
   updatedAt  DateTime @default(now())
   chapterId  Int
   chapter    Chapter  @relation(fields: [chapterId], references: [id])
-  Course     Course?  @relation(fields: [courseId], references: [id])
-  courseId   Int?
 }
 
 model Promotion {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   discount  Decimal
-  startDate DateTime?
-  endDate   DateTime?
+  startDate String
+  endDate   String
   course    Course[]
 }
 
@@ -98,4 +102,14 @@ model Notification {
   createdAt DateTime @default(now())
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Enrollment {
+  id         Int      @id @default(autoincrement())
+  userRating Int?
+  createAt   DateTime @default(now())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  courseId   Int
+  course     Course   @relation(fields: [courseId], references: [id])
 }
