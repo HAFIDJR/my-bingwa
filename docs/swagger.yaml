@@ -2278,6 +2278,12 @@ components:
         duration:
           type: string
           example: "120 Minute"
+        category:
+          type: object
+          properties:
+            categoryName:
+              type: string
+              example: "Web Development"
         createdAt:
           type: string
           example: "2023-11-24T01:11:59.133Z"
@@ -2523,6 +2529,9 @@ components:
               categoryName:
                 type: string
                 example: "UI/UX Design"
+              categoryImg:
+                type: string
+                example: "https://images.unsplash.com/photo-1600087626120-062700394a01?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
     EditCategory:
       content:
         application/json:
@@ -2571,6 +2580,9 @@ components:
               duration:
                 type: string
                 example: "120 Minute"
+              courseImg:
+                type: string
+                example: "https://images.unsplash.com/photo-1571171637578-41bc2dd41cd2?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               categoryId:
                 type: integer
                 example: 1
