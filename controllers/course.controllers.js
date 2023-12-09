@@ -256,6 +256,13 @@ module.exports = {
       } else {
         const { limit = 10, page = 1 } = req.query;
         const courses = await prisma.course.findMany({
+          include: {
+            category: {
+              select: {
+                categoryName: true,
+              },
+            },
+          },
           skip: (Number(page) - 1) * Number(limit),
           take: Number(limit),
         });
