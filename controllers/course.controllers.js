@@ -148,14 +148,14 @@ module.exports = {
           id: Number(idCourse),
         },
         include: {
+          category: {
+            select: {
+              categoryName: true,
+            },
+          },
           chapter: {
             include: {
-              lesson: {
-                select: {
-                  lessonName: true,
-                  videoURL: true,
-                },
-              },
+              lesson: true,
             },
           },
         },
@@ -180,11 +180,20 @@ module.exports = {
         include: {
           enrollment: {
             select: {
-              Course: {
+              course: {
                 select: {
                   id: true,
                   courseName: true,
-                  isPremium: true,
+                  mentor: true,
+                  averageRating: true,
+                  duration: true,
+                  level: true,
+                  price: true,
+                  category: {
+                    select: {
+                      categoryName: true,
+                    },
+                  },
                 },
               },
             },
@@ -193,7 +202,7 @@ module.exports = {
       });
       let courseUser = [];
       enrollment.forEach((val) => {
-        courseUser.push(val["Course"]);
+        courseUser.push(val["course"]);
       });
       res.json({
         status: true,
@@ -213,7 +222,6 @@ module.exports = {
           terbaru: { orderBy: { createdAt: "desc" } },
           promo: { where: { promotionId: { not: null } } },
         };
-        console.log(typeof category === "string");
         const query = {
           ...filterOptions[filter],
           where: {
@@ -224,7 +232,6 @@ module.exports = {
           },
         };
         const courses = await prisma.course.findMany(query);
-
         res.status(200).json({
           status: true,
           message: "Get Course Success",
@@ -248,8 +255,6 @@ module.exports = {
         });
       } else {
         const { limit = 10, page = 1 } = req.query;
-        console.log(limit);
-
         const courses = await prisma.course.findMany({
           skip: (Number(page) - 1) * Number(limit),
           take: Number(limit),
@@ -267,8 +272,8 @@ module.exports = {
           data: { paggination, courses },
         });
       }
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   },
 };

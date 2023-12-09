@@ -13,24 +13,28 @@ datasource db {
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
-  email        String         @unique
-  password     String
-  otp          String
-  otpCreatedAt DateTime
-  isVerified   Boolean        @default(false)
-  role         String         @default("user")
-  courses      Course[]       @relation("UserToCourse")
-  userProfile  UserProfile?
-  notification Notification[]
-  enrollment   Enrollment[]
+  id                 Int            @id @default(autoincrement())
+  email              String         @unique
+  password           String?
+  otp                String?
+  otpCreatedAt       DateTime?
+  isVerified         Boolean        @default(false)
+  role               String         @default("user")
+  resetPasswordToken String?
+  googleId           String?
+  courses            Course[]       @relation("UserToCourse")
+  tracking           Tracking[]
+  userProfile        UserProfile?
+  notification       Notification[]
+  enrollment         Enrollment[]
+  payment            Payment[]
 }
 
 model UserProfile {
   id             Int     @id @default(autoincrement())
   profilePicture String?
   fullName       String
-  phoneNumber    String  @unique
+  phoneNumber    String? @unique
   city           String?
   country        String?
   userId         Int     @unique
@@ -40,6 +44,7 @@ model UserProfile {
 model Category {
   id           Int      @id @default(autoincrement())
   categoryName String   @unique
+  categoryImg  String?
   course       Course[]
 }
 
@@ -57,8 +62,11 @@ model Course {
   videoURL         String
   forumURL         String
   duration         String
+  courseImg        String?
   chapter          Chapter[]
   enrollment       Enrollment[]
+  payment          Payment[]
+  lesson           Lesson[]
   user             User[]       @relation("UserToCourse")
   createdAt        DateTime     @default(now())
   categoryId       Int
@@ -77,13 +85,16 @@ model Chapter {
 }
 
 model Lesson {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   lessonName String
   videoURL   String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now())
   chapterId  Int
-  chapter    Chapter  @relation(fields: [chapterId], references: [id])
+  courseId   Int?
+  tracking   Tracking?
+  chapter    Chapter   @relation(fields: [chapterId], references: [id])
+  Course     Course?   @relation(fields: [courseId], references: [id])
 }
 
 model Promotion {
@@ -112,4 +123,26 @@ model Enrollment {
   user       User     @relation(fields: [userId], references: [id])
   courseId   Int
   course     Course   @relation(fields: [courseId], references: [id])
+}
+
+model Payment {
+  id            Int      @id @default(autoincrement())
+  amount        Int
+  status        String   @default("Unpaid")
+  methodPayment String
+  createAt      DateTime @default(now())
+  updatedAt     DateTime @default(now())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
+  courseId      Int
+  course        Course   @relation(fields: [courseId], references: [id])
+}
+
+model Tracking {
+  id       Int     @id @default(autoincrement())
+  status   Boolean @default(false)
+  userId   Int?
+  user     User?   @relation(fields: [userId], references: [id])
+  lessonId Int?    @unique
+  lesson   Lesson? @relation(fields: [lessonId], references: [id])
 }

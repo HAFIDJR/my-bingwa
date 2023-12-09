@@ -11,6 +11,14 @@ module.exports = {
       const file = req.file;
       let imageURL;
 
+      if (fullName.length > 50) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid full name length. It must be at most 50 characters.",
+          data: null,
+        });
+      }
+
       if (phoneNumber) {
         if (!/^\d+$/.test(phoneNumber)) {
           return res.status(400).json({

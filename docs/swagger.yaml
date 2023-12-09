@@ -7,6 +7,7 @@ info:
 servers:
   - url: http://localhost:3000/api/v1
   - url: https://bingwa-b11.vercel.app/api/v1
+  - url: https://nodejsglove2040.stack-ap2.st4as.com/api/v1
 tags:
   - name: Users
     description: Operations about user
@@ -24,6 +25,12 @@ tags:
     description: Operations about Enrollment
   - name: Promotions
     description: Operations about Promotion
+  - name: Notifications
+    description: Operations about Notification
+  - name: Trackings
+    description: Operations about Tracking
+  - name: Payments
+    description: Operations about Payment
 paths:
   /users/register:
     post:
@@ -438,6 +445,35 @@ paths:
                   message:
                     type: string
                     example: "Incorrect old password"
+  /users/google:
+    get:
+      tags:
+        - Users
+      operationId: get-login-user-with-google
+      summary: Initiate Google OAuth 2.0 Authentication
+      description: Redirects the user to Google for authentication.
+      security:
+        - google_oauth: []
+      responses:
+        "302":
+          description: Redirect to Google for authentication.
+  /users/google/callback:
+    get:
+      tags:
+        - Users
+      operationId: get-login-user-with-google-callback
+      summary: Google OAuth 2.0 Callback
+      description: Handles the callback after successful Google authentication.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: Authorization code received from Google.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully authenticated with Google.
   /user-profiles/update-profile:
     put:
       tags:
@@ -1000,6 +1036,12 @@ paths:
       operationId: get-all-lessons
       summary: Get all lessons
       description: Get all lessons
+      parameters:
+        - name: search
+          in: query
+          description: search for get chapters
+          schema:
+            type: string
       responses:
         "200":
           description: Successful operation
@@ -1016,11 +1058,24 @@ paths:
                           lessons:
                             type: array
                             items:
-                              $ref: "#/components/schemas/LessonModel"
-                              type: object
-                              properties:
-                                chapter:
-                                  $ref: "#/components/schemas/ChapterModel"
+                              allOf:
+                                - $ref: "#/components/schemas/LessonModel"
+                                - type: object
+                                  properties:
+                                    chapter:
+                                      allOf:
+                                        - $ref: "#/components/schemas/ChapterModel"
+                                        - type: object
+                                          properties:
+                                            course:
+                                              allOf:
+                                                - $ref: "#/components/schemas/CourseModel"
+                                                - type: object
+                                                  properties:
+                                                    category:
+                                                      allOf:
+                                                        - $ref: "#/components/schemas/CategoryModel"
+
     post:
       tags:
         - Lessons
@@ -1058,18 +1113,18 @@ paths:
       parameters:
         - name: chapter
           in: query
-          description: chapter for get lessons``
+          description: chapter for get lessons
           required: true
           schema:
             type: string
         - name: lesson
           in: query
-          description: lesson for get lessons``
+          description: lesson for get lessons
           schema:
             type: string
         - name: course
           in: query
-          description: course for get lessons``
+          description: course for get lessons
           schema:
             type: string
       responses:
@@ -1465,8 +1520,24 @@ paths:
                   - type: object
                     properties:
                       data:
-                        allOf:
-                          - $ref: "#/components/schemas/EnrollmentModel"
+                        type: object
+                        properties:
+                          enrollCourse:
+                            allOf:
+                              - $ref: "#/components/schemas/EnrollmentModel"
+                          trackingRecords:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: "#/components/schemas/TrackingModel"
+                                - type: object
+                                  properties:
+                                    lesson:
+                                      type: object
+                                      properties:
+                                        lessonName:
+                                          type: string
+                                          example: "The Purpose of Taking Design System Classes"
         "400":
           description: User Already Enroll
           content:
@@ -1723,6 +1794,336 @@ paths:
                   message:
                     type: string
                     example: "failed"
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      operationId: get-all-notifications-by-authentication
+      summary: Get all notifications by authentication
+      description: Get all notifications by authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          notifications:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: "#/components/schemas/NotificationModel"
+    post:
+      tags:
+        - Notifications
+      operationId: post-create-notification
+      summary: Create notification
+      description: Create notification with the provided information.
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/CreateNotification"
+      responses:
+        "201":
+          description: Create notification was successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          newNotification:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: "#/components/schemas/PromotionModel"
+                                - type: object
+                                  properties:
+                                    user:
+                                      type: object
+                                      properties:
+                                        userProfile:
+                                          type: object
+                                          properties:
+                                            fullName:
+                                              type: string
+                                              example: "Budi Cahyono"
+  /notifications/markAsRead:
+    put:
+      tags:
+        - Notifications
+      operationId: put-notifications-by-authentication
+      summary: Put notifications by authentication
+      description: Put notifications by authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          notifications:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 10
+  /trackings/{lessonId}:
+    put:
+      tags:
+        - Trackings
+      operationId: put-tracking-by-lesson-id
+      summary: Put tracking by lesson id
+      description: Edit tracking by lesson id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: lessonId
+          schema:
+            type: integer
+          required: true
+          description: The ID of the lesson to retrieve.
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tracking:
+                            allOf:
+                              - $ref: "#/components/schemas/TrackingModel"
+  /payments:
+    get:
+      tags:
+        - Payments
+      operationId: get-all-payments
+      summary: get all payments
+      description: get all payments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: search for get payments
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          payments:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: "#/components/schemas/PromotionModel"
+                                - type: object
+                                  properties:
+                                    user:
+                                      allOf:
+                                        - $ref: "#/components/schemas/UserModel"
+                                        - type: object
+                                          properties:
+                                            userProfile:
+                                              allOf:
+                                                - $ref: "#/components/schemas/UserProfileModel"
+                                    course:
+                                      allOf:
+                                        - $ref: "#/components/schemas/CourseModel"
+                                        - type: object
+                                          properties:
+                                            category:
+                                              allOf:
+                                                - $ref: "#/components/schemas/CategoryModel"
+  /payments/history:
+    get:
+      tags:
+        - Payments
+      operationId: get-payments-by-authentication
+      summary: get payments by authentication
+      description: get payments by authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          payments:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: "#/components/schemas/PromotionModel"
+                                - type: object
+                                  properties:
+                                    course:
+                                      allOf:
+                                        - $ref: "#/components/schemas/CourseModel"
+                                        - type: object
+                                          properties:
+                                            category:
+                                              allOf:
+                                                - $ref: "#/components/schemas/CategoryModel"
+  /payments/{courseId}/course:
+    get:
+      tags:
+        - Payments
+      operationId: get-payment-by-course-id
+      summary: get payment by course id
+      description: get payment by course id
+      parameters:
+        - in: path
+          name: courseId
+          schema:
+            type: integer
+          required: true
+          description: The ID of the payment to retrieve.
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          course:
+                            allOf:
+                              - $ref: "#/components/schemas/CourseModel"
+                              - type: object
+                                properties:
+                                  category:
+                                    type: object
+                                    properties:
+                                      categoryName:
+                                        type: string
+                                        example: "UI/UX Design"
+                          PPN:
+                            type: integer
+                            example: 27500
+                          amount:
+                            type: integer
+                            example: 277500
+        "404":
+          description: Course Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+    post:
+      tags:
+        - Payments
+      operationId: post-create-payment
+      summary: post create payment
+      description: post create payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: courseId
+          schema:
+            type: integer
+          required: true
+          description: The ID of the course to retrieve.
+      requestBody:
+        $ref: "#/components/requestBodies/CreatePayment"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/BasicResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          newPayment:
+                            $ref: "#/components/schemas/PaymentModel"
+        "400":
+          description: Invalid Promotion ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+        "404":
+          description: Promotion Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "failed"
+
 components:
   schemas:
     BasicResponse:
@@ -1847,7 +2248,8 @@ components:
           type: integer
           example: 250000
         averageRating:
-          type: integer
+          type: number
+          format: float
           example: 5
         level:
           type: string
@@ -1930,9 +2332,9 @@ components:
         id:
           type: integer
           example: 1
-        isPaid:
-          type: boolean
-          example: false
+        userRating:
+          type: integer
+          example: 5
         createdAt:
           type: string
           example: "2023-11-24T01:11:59.133Z"
@@ -1959,6 +2361,50 @@ components:
         endDate:
           type: string
           example: "2023-11-24T01:11:59.133Z"
+    TrackingModel:
+      title: Tracking
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        status:
+          type: string
+          example: false
+        userId:
+          type: integer
+          example: 1
+        lessonId:
+          type: integer
+          example: 1
+    PaymentModel:
+      title: Payment
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        amount:
+          type: integer
+          example: 100000
+        status:
+          type: string
+          example: "Unpaid"
+        methodPayment:
+          type: string
+          example: "Credit Card"
+        createdAt:
+          type: string
+          example: "2023-11-24T01:11:59.133Z"
+        updatedAt:
+          type: string
+          example: "2023-11-24T01:11:59.133Z"
+        userId:
+          type: integer
+          example: 1
+        courseId:
+          type: integer
+          example: 1
   requestBodies:
     Register:
       content:
@@ -2271,8 +2717,39 @@ components:
               endDate:
                 type: string
                 example: "2023-11-30"
+    CreateNotification:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                example: "Notification"
+              message:
+                type: string
+                example: "Password successfully updated!"
+    CreatePayment:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              methodPayment:
+                type: string
+                example: "Credit Card"
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    google_oauth:
+      type: oauth2
+      description: Google OAuth
+      flows:
+        authorizationCode:
+          authorizationUrl: https://accounts.google.com/o/oauth2/v2/auth
+          tokenUrl: https://www.googleapis.com/oauth2/v4/token
+          scopes:
+            profile: View your basic profile info
+            email: View your email address

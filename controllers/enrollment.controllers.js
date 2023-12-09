@@ -3,7 +3,6 @@ const prisma = new PrismaClient();
 
 module.exports = {
   courseEnrollment: async (req, res, next) => {
-    //for free course
     try {
       const { courseId } = req.params;
 
@@ -36,7 +35,6 @@ module.exports = {
         },
       });
 
-      // check user alredy enrol course or not
       if (statusEnrollUser) {
         return res.status(400).json({
           status: false,
@@ -45,7 +43,6 @@ module.exports = {
         });
       }
 
-      // Check if the course is premium
       if (course.isPremium) {
         return res.status(400).json({
           status: false,
@@ -61,10 +58,37 @@ module.exports = {
         },
       });
 
+      const lessons = await prisma.lesson.findMany({
+        where: {
+          chapter: {
+            courseId: Number(courseId),
+          },
+        },
+      });
+
+      const trackingRecords = await Promise.all(
+        lessons.map(async (lesson) => {
+          return prisma.tracking.create({
+            data: {
+              userId: Number(req.user.id),
+              lessonId: lesson.id,
+              status: false,
+            },
+            include: {
+              lesson: {
+                select: {
+                  lessonName: true,
+                },
+              },
+            },
+          });
+        })
+      );
+
       res.status(201).json({
         status: true,
         message: "Succes To Enroll Course",
-        data: { enrollCourse },
+        data: { enrollCourse, trackingRecords },
       });
     } catch (err) {
       next(err);

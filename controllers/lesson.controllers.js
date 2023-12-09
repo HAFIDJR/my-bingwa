@@ -50,11 +50,25 @@ const createLesson = async (req, res, next) => {
 
 const getAllLessons = async (req, res, next) => {
   try {
+    const { search } = req.query;
+
     const lessons = await prisma.lesson.findMany({
+      where: {
+        OR: [
+          { lessonName: { contains: search, mode: "insensitive" } },
+          { chapter: { name: { contains: search, mode: "insensitive" } } },
+          { chapter: { course: { courseName: { contains: search, mode: "insensitive" } } } },
+          { chapter: { course: { category: { categoryName: { contains: search, mode: "insensitive" } } } } },
+        ],
+      },
       include: {
         chapter: {
-          select: {
-            name: true,
+          include: {
+            course: {
+              include: {
+                category: true,
+              },
+            },
           },
         },
       },
@@ -167,7 +181,7 @@ const deleteLessonById = async (req, res, next) => {
   }
 };
 
-const searchLesson = async (req, res, next) => {
+const filterLesson = async (req, res, next) => {
   try {
     const { chapter, lesson, course } = req.query;
     if (chapter || lesson || course) {
@@ -274,6 +288,6 @@ module.exports = {
   getDetailLesson,
   updateDetailLesson,
   deleteLessonById,
-  searchLesson,
+  filterLesson,
   showLessonByCourse,
 };

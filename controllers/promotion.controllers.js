@@ -13,6 +13,24 @@ module.exports = {
         });
       }
 
+      const users = await prisma.user.findMany({
+        select:{
+          id: true
+        }
+      })
+
+      const blastNotif = users.forEach((user) => ({
+        userId: user.id,
+        title: "Promo",
+        message: `Diskon ${discount}% berlaku dari ${new Date(startDate).toLocaleDateString("id-ID")} sampai ${new Date(endDate).toLocaleDateString("id-ID")}`
+      }))
+
+      await prisma.$transaction([
+        await prisma.notification.createMany({
+          data: blastNotif
+        })
+      ])
+      
       const newPromotion = await prisma.promotion.create({
         data: { discount, startDate, endDate },
       });

@@ -62,6 +62,9 @@ const getChapterById = async (req, res, next) => {
       where: {
         id: Number(id),
       },
+      include: {
+        lesson: true,
+      },
     });
 
     if (!chapter) return res.status(404).json({ status: false, message: "chapter not found", data: null });

@@ -4,10 +4,11 @@ const prisma = new PrismaClient();
 module.exports = {
   createCategory: async (req, res, next) => {
     try {
-      const { categoryName } = req.body;
+      const { categoryName, categoryImg } = req.body;
       let newCategory = await prisma.category.create({
         data: {
           categoryName,
+          categoryImg,
         },
       });
       return res.status(201).json({
@@ -25,7 +26,9 @@ module.exports = {
       const { search } = req.query;
 
       const categories = await prisma.category.findMany({
-        where: search ? { categoryName: { contains: search, mode: "insensitive" } } : {},
+        where: search
+          ? { categoryName: { contains: search, mode: "insensitive" } }
+          : { },
       });
 
       return res.status(200).json({

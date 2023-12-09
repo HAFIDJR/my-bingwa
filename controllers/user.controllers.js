@@ -11,7 +11,26 @@ module.exports = {
   register: async (req, res, next) => {
     try {
       let { fullName, email, phoneNumber, password } = req.body;
-      const passwordValidator = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const passwordValidator =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const emailValidator = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!fullName || !email || !phoneNumber || !password) {
+        return res.status(400).json({
+          status: false,
+          message: "All fields are required.",
+          data: null,
+        });
+      }
+
+      if (fullName.length > 50) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "Invalid full name length. It must be at most 50 characters.",
+          data: null,
+        });
+      }
 
       const existingUser = await prisma.user.findFirst({
         where: {
@@ -27,10 +46,19 @@ module.exports = {
         });
       }
 
+      if (!emailValidator.test(email)) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid email format.",
+          data: null,
+        });
+      }
+
       if (!/^\d+$/.test(phoneNumber)) {
         return res.status(400).json({
           status: false,
-          message: "Invalid phone number format. It must contain only numeric characters.",
+          message:
+            "Invalid phone number format. It must contain only numeric characters.",
           data: null,
         });
       }
@@ -38,7 +66,8 @@ module.exports = {
       if (phoneNumber.length < 10 || phoneNumber.length > 12) {
         return res.status(400).json({
           status: false,
-          message: "Invalid phone number length. It must be between 10 and 12 characters.",
+          message:
+            "Invalid phone number length. It must be between 10 and 12 characters.",
           data: null,
         });
       }
@@ -46,7 +75,8 @@ module.exports = {
       if (!passwordValidator.test(password)) {
         return res.status(400).json({
           status: false,
-          message: "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
+          message:
+            "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
           data: null,
         });
       }
@@ -92,7 +122,10 @@ module.exports = {
 
       const user = await prisma.user.findFirst({
         where: {
-          OR: [{ email: emailOrPhoneNumber }, { userProfile: { phoneNumber: emailOrPhoneNumber } }],
+          OR: [
+            { email: emailOrPhoneNumber },
+            { userProfile: { phoneNumber: emailOrPhoneNumber } },
+          ],
         },
       });
 
@@ -123,11 +156,13 @@ module.exports = {
 
       let token = jwt.sign({ id: user.id }, JWT_SECRET_KEY);
 
-      return res.status(200).json({
-        status: true,
-        message: "Login successful",
-        data: { user, token },
-      });
+      return res
+      .status(200)
+      .json({
+          status: true,
+          message: "Login successful",
+          data: { user, token },
+        });
     } catch (err) {
       next(err);
     }
@@ -226,7 +261,7 @@ module.exports = {
         });
       }
 
-      let token = jwt.sign({ email: user.email }, JWT_SECRET_KEY);
+      let token = jwt.sign({ email: user.email }, JWT_SECRET_KEY, { expiresIn: "1h" });
       const html = await nodemailer.getHtml("email-password-reset.ejs", {
         email,
         token,
@@ -248,12 +283,14 @@ module.exports = {
       let { token } = req.query;
       let { password, passwordConfirmation } = req.body;
 
-      const passwordValidator = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const passwordValidator =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
 
       if (!passwordValidator.test(password)) {
         return res.status(400).json({
           status: false,
-          message: "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
+          message:
+            "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
           data: null,
         });
       }
@@ -261,13 +298,26 @@ module.exports = {
       if (password !== passwordConfirmation) {
         return res.status(400).json({
           status: false,
-          message: "Please ensure that the password and password confirmation match!",
+          message:
+            "Please ensure that the password and password confirmation match!",
           data: null,
         });
       }
 
       let encryptedPassword = await bcrypt.hash(password, 10);
-
+      // check Token Is already used or not
+      const user = await prisma.user.findFirst({
+        where: {
+          resetPasswordToken: token,
+        },
+      });
+      if (user) {
+        return res.status(400).json({
+          status: false,
+          message: "Token Is Alredy Use , generate new token to reset password",
+        });
+      }
+      // end check Token Is already used or not
       jwt.verify(token, JWT_SECRET_KEY, async (err, decoded) => {
         if (err) {
           return res.status(400).json({
@@ -280,7 +330,7 @@ module.exports = {
 
         let updateUser = await prisma.user.update({
           where: { email: decoded.email },
-          data: { password: encryptedPassword },
+          data: { password: encryptedPassword, resetPasswordToken: token },
         });
 
         let newNotification = await prisma.notification.create({
@@ -298,6 +348,7 @@ module.exports = {
         });
       });
     } catch (err) {
+      console.log(err);
       next(err);
     }
   },
@@ -333,7 +384,10 @@ module.exports = {
     try {
       const { oldPassword, newPassword, newPasswordConfirmation } = req.body;
 
-      let isOldPasswordCorrect = await bcrypt.compare(oldPassword, req.user.password);
+      let isOldPasswordCorrect = await bcrypt.compare(
+        oldPassword,
+        req.user.password
+      );
       if (!isOldPasswordCorrect) {
         return res.status(401).json({
           status: false,
@@ -342,12 +396,14 @@ module.exports = {
         });
       }
 
-      const passwordValidator = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const passwordValidator =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
 
       if (!passwordValidator.test(newPassword)) {
         return res.status(400).json({
           status: false,
-          message: "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
+          message:
+            "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
           data: null,
         });
       }
@@ -355,7 +411,8 @@ module.exports = {
       if (newPassword !== newPasswordConfirmation) {
         return res.status(400).json({
           status: false,
-          message: "Please ensure that the new password and confirmation match!",
+          message:
+            "Please ensure that the new password and confirmation match!",
           data: null,
         });
       }
@@ -383,5 +440,16 @@ module.exports = {
     } catch (err) {
       next(err);
     }
+  },
+
+  googleOauth2: (req, res) => {
+    let token = jwt.sign({ id: req.user.id }, JWT_SECRET_KEY);
+
+    return res.status(200).json({
+      status: true,
+      message: "OK",
+      err: null,
+      data: { user: req.user, token },
+    });
   },
 };
