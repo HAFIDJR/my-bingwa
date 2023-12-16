@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { formattedDate } = require("../utils/formattedDate");
 
 const findChapterById = async (chapterId) => {
   return await prisma.chapter.findUnique({
@@ -22,7 +23,23 @@ const findLessonById = async (lessonId) => {
 
 const createLesson = async (req, res, next) => {
   try {
-    const { lessonName, videoURL, chapterId } = req.body;
+    const { lessonName, videoURL, chapterId, createdAt, updatedAt } = req.body;
+
+    if (!lessonName || !videoURL || !chapterId) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide lessonName, videoURL, and chapterId",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during lesson creation",
+        data: null,
+      });
+    }
 
     const chapter = await findChapterById(chapterId);
 
@@ -34,14 +51,51 @@ const createLesson = async (req, res, next) => {
       });
     }
 
-    const newLesson = await prisma.lesson.create({
-      data: { lessonName, videoURL, chapterId },
+    const users = await prisma.user.findMany();
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        userId: { in: users.map((user) => user.id) },
+        courseId: chapter.courseId,
+      },
     });
+    const newLesson = await prisma.lesson.create({
+      data: {
+        lessonName,
+        videoURL,
+        chapterId,
+        createdAt: formattedDate(new Date()),
+        updatedAt: formattedDate(new Date()),
+      },
+    });
+
+    // menambahkan fitur update progres jika sudah enrol course
+    const trackingRecords = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        return prisma.tracking.create({
+          data: {
+            userId: Number(enrollment.userId),
+            lessonId: Number(newLesson.id),
+            courseId: Number(chapter.courseId),
+            status: false,
+            createdAt: formattedDate(new Date()),
+            updatedAt: formattedDate(new Date()),
+          },
+          include: {
+            lesson: {
+              select: {
+                lessonName: true,
+              },
+            },
+          },
+        });
+      })
+    );
 
     res.status(201).json({
       status: true,
       message: "Lesson created successfully",
-      data: { newLesson },
+      data: { newLesson, trackingRecords },
     });
   } catch (err) {
     next(err);
@@ -57,16 +111,34 @@ const getAllLessons = async (req, res, next) => {
         OR: [
           { lessonName: { contains: search, mode: "insensitive" } },
           { chapter: { name: { contains: search, mode: "insensitive" } } },
-          { chapter: { course: { courseName: { contains: search, mode: "insensitive" } } } },
-          { chapter: { course: { category: { categoryName: { contains: search, mode: "insensitive" } } } } },
+          {
+            chapter: {
+              course: { courseName: { contains: search, mode: "insensitive" } },
+            },
+          },
+          {
+            chapter: {
+              course: {
+                category: {
+                  categoryName: { contains: search, mode: "insensitive" },
+                },
+              },
+            },
+          },
         ],
       },
       include: {
         chapter: {
-          include: {
+          select: {
+            name: true,
             course: {
-              include: {
-                category: true,
+              select: {
+                courseName: true,
+                category: {
+                  select: {
+                    categoryName: true,
+                  },
+                },
               },
             },
           },
@@ -111,7 +183,23 @@ const getDetailLesson = async (req, res, next) => {
 const updateDetailLesson = async (req, res, next) => {
   try {
     const lessonId = req.params.id;
-    const { lessonName, videoURL, chapterId } = req.body;
+    const { lessonName, videoURL, chapterId, createdAt, updatedAt } = req.body;
+
+    if (!lessonName || !videoURL || !chapterId) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide lessonName, videoURL, and chapterId",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during lesson update",
+        data: null,
+      });
+    }
 
     const lesson = await findLessonById(lessonId);
 
@@ -139,7 +227,7 @@ const updateDetailLesson = async (req, res, next) => {
         lessonName,
         videoURL,
         chapterId,
-        updatedAt: new Date(),
+        updatedAt: formattedDate(new Date()),
       },
     });
 

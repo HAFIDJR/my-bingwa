@@ -5,14 +5,14 @@ const jwt = require("jsonwebtoken");
 
 const { generatedOTP } = require("../utils/otpGenerator");
 const nodemailer = require("../utils/nodemailer");
+const { formattedDate } = require("../utils/formattedDate");
 const { JWT_SECRET_KEY } = process.env;
 
 module.exports = {
   register: async (req, res, next) => {
     try {
       let { fullName, email, phoneNumber, password } = req.body;
-      const passwordValidator =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const passwordValidator = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
       const emailValidator = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (!fullName || !email || !phoneNumber || !password) {
@@ -26,8 +26,7 @@ module.exports = {
       if (fullName.length > 50) {
         return res.status(400).json({
           status: false,
-          message:
-            "Invalid full name length. It must be at most 50 characters.",
+          message: "Invalid full name length. It must be at most 50 characters.",
           data: null,
         });
       }
@@ -57,8 +56,7 @@ module.exports = {
       if (!/^\d+$/.test(phoneNumber)) {
         return res.status(400).json({
           status: false,
-          message:
-            "Invalid phone number format. It must contain only numeric characters.",
+          message: "Invalid phone number format. It must contain only numeric characters.",
           data: null,
         });
       }
@@ -66,8 +64,7 @@ module.exports = {
       if (phoneNumber.length < 10 || phoneNumber.length > 12) {
         return res.status(400).json({
           status: false,
-          message:
-            "Invalid phone number length. It must be between 10 and 12 characters.",
+          message: "Invalid phone number length. It must be between 10 and 12 characters.",
           data: null,
         });
       }
@@ -75,8 +72,7 @@ module.exports = {
       if (!passwordValidator.test(password)) {
         return res.status(400).json({
           status: false,
-          message:
-            "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
+          message: "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
           data: null,
         });
       }
@@ -122,10 +118,7 @@ module.exports = {
 
       const user = await prisma.user.findFirst({
         where: {
-          OR: [
-            { email: emailOrPhoneNumber },
-            { userProfile: { phoneNumber: emailOrPhoneNumber } },
-          ],
+          OR: [{ email: emailOrPhoneNumber }, { userProfile: { phoneNumber: emailOrPhoneNumber } }],
         },
       });
 
@@ -156,13 +149,11 @@ module.exports = {
 
       let token = jwt.sign({ id: user.id }, JWT_SECRET_KEY);
 
-      return res
-      .status(200)
-      .json({
-          status: true,
-          message: "Login successful",
-          data: { user, token },
-        });
+      return res.status(200).json({
+        status: true,
+        message: "Login successful",
+        data: { user, token },
+      });
     } catch (err) {
       next(err);
     }
@@ -283,14 +274,12 @@ module.exports = {
       let { token } = req.query;
       let { password, passwordConfirmation } = req.body;
 
-      const passwordValidator =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const passwordValidator = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
 
       if (!passwordValidator.test(password)) {
         return res.status(400).json({
           status: false,
-          message:
-            "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
+          message: "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
           data: null,
         });
       }
@@ -298,8 +287,7 @@ module.exports = {
       if (password !== passwordConfirmation) {
         return res.status(400).json({
           status: false,
-          message:
-            "Please ensure that the password and password confirmation match!",
+          message: "Please ensure that the password and password confirmation match!",
           data: null,
         });
       }
@@ -338,6 +326,7 @@ module.exports = {
             title: "Notifikasi",
             message: "Password berhasil diubah!",
             userId: updateUser.id,
+            createdAt: formattedDate(new Date()),
           },
         });
 
@@ -384,10 +373,15 @@ module.exports = {
     try {
       const { oldPassword, newPassword, newPasswordConfirmation } = req.body;
 
-      let isOldPasswordCorrect = await bcrypt.compare(
-        oldPassword,
-        req.user.password
-      );
+      if (!oldPassword || !newPassword || !newPasswordConfirmation) {
+        return res.status(400).json({
+          status: false,
+          message: "Please provide oldPassword, newPassword, and newPasswordConfirmation",
+          data: null,
+        });
+      }
+
+      let isOldPasswordCorrect = await bcrypt.compare(oldPassword, req.user.password);
       if (!isOldPasswordCorrect) {
         return res.status(401).json({
           status: false,
@@ -396,14 +390,12 @@ module.exports = {
         });
       }
 
-      const passwordValidator =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
+      const passwordValidator = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,12}$/;
 
       if (!passwordValidator.test(newPassword)) {
         return res.status(400).json({
           status: false,
-          message:
-            "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
+          message: "Invalid password format. It must contain at least 1 lowercase, 1 uppercase, 1 digit number, 1 symbol, and be between 8 and 12 characters long.",
           data: null,
         });
       }
@@ -411,8 +403,7 @@ module.exports = {
       if (newPassword !== newPasswordConfirmation) {
         return res.status(400).json({
           status: false,
-          message:
-            "Please ensure that the new password and confirmation match!",
+          message: "Please ensure that the new password and confirmation match!",
           data: null,
         });
       }
@@ -429,6 +420,7 @@ module.exports = {
           title: "Notification",
           message: "Password successfully changed!",
           userId: req.user.id,
+          createdAt: formattedDate(new Date()),
         },
       });
 

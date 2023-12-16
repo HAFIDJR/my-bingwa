@@ -11,6 +11,14 @@ module.exports = {
       const file = req.file;
       let imageURL;
 
+      if (!fullName || !phoneNumber || !city || !country) {
+        return res.status(400).json({
+          status: false,
+          message: "Please provide fullName, phoneNumber, city, and country",
+          data: null,
+        });
+      }
+
       if (fullName.length > 50) {
         return res.status(400).json({
           status: false,

@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { formattedDate } = require("../utils/formattedDate");
 
 module.exports = {
   getAllNotifications: async (req, res, next) => {
@@ -20,12 +21,20 @@ module.exports = {
 
   createNotification: async (req, res, next) => {
     try {
-      const { title, message } = req.body;
+      const { title, message, createdAt } = req.body;
 
       if (!title || !message) {
         return res.status(400).json({
           status: false,
           message: "Title and message are required fields",
+        });
+      }
+
+      if (createdAt !== undefined) {
+        return res.status(400).json({
+          status: false,
+          message: "createdAt  cannot be provided during notification creation",
+          data: null,
         });
       }
 
@@ -38,6 +47,7 @@ module.exports = {
               title,
               message,
               userId: user.id,
+              createdAt: formattedDate(new Date()),
             },
             include: {
               user: {

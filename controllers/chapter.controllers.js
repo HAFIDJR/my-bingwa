@@ -1,14 +1,34 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { formattedDate } = require("../utils/formattedDate");
 
 const createChapter = async (req, res, next) => {
   try {
-    const { name, courseId } = req.body;
+    const { name, courseId, duration, createdAt, updatedAt } = req.body;
+
+    if (!name || !courseId || !duration) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide name, courseId, and duration",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during chapter creation",
+        data: null,
+      });
+    }
 
     const newChapter = await prisma.chapter.create({
       data: {
         name,
         courseId,
+        duration,
+        createdAt: formattedDate(new Date()),
+        updatedAt: formattedDate(new Date()),
       },
     });
 
@@ -39,6 +59,18 @@ const getChapters = async (req, res, next) => {
         course: {
           select: {
             courseName: true,
+            category: {
+              select: {
+                categoryName: true,
+              },
+            },
+          },
+        },
+        lesson: {
+          select: {
+            lessonName: true,
+            videoURL: true,
+            createdAt: true,
           },
         },
       },
@@ -49,8 +81,8 @@ const getChapters = async (req, res, next) => {
       message: "Get chapters success",
       data: { chapters },
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -63,7 +95,13 @@ const getChapterById = async (req, res, next) => {
         id: Number(id),
       },
       include: {
-        lesson: true,
+        lesson: {
+          select: {
+            lessonName: true,
+            videoURL: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -82,6 +120,23 @@ const getChapterById = async (req, res, next) => {
 const updateChapter = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { name, courseId, duration, createdAt, updatedAt } = req.body;
+
+    if (!name || !courseId || !duration) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide name, courseId, and duration",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during chapter update",
+        data: null,
+      });
+    }
 
     const isExistChapter = await prisma.chapter.findUnique({
       where: {
@@ -97,6 +152,7 @@ const updateChapter = async (req, res, next) => {
       },
       data: {
         ...req.body,
+        updatedAt: formattedDate(new Date()),
       },
     });
 

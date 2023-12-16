@@ -5,7 +5,8 @@ module.exports = (role) => {
         status: false,
         message: "Access denied. You are not authorized",
       });
+    } else {
+      next();
     }
-    next();
   };
 };
