@@ -1,4 +1,4 @@
-const  getPagination = (req, count, page, limit) => {
+const getPagination = (req, count, page, limit) => {
     let result = {};
     let link = {};
     let path = `${req.protocol}://${req.get('host')}` + req.baseUrl + req.path;

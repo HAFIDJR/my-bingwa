@@ -301,37 +301,37 @@ async function getCourse() {
     ],
   });
 }
-// async function getCategory() {
-//  await prisma.category.createMany({data:[
-//     {
-//       categoryName: 'UI-UX Design',
-//       categoryImg: 'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+async function getCategory() {
+ await prisma.category.createMany({data:[
+    {
+      categoryName: 'UI-UX Design',
+      categoryImg: 'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 
-//     },
-//     {
-//       categoryName: 'Product Management',
-//       categoryImg: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-//     },
-//     {
+    },
+    {
+      categoryName: 'Product Management',
+      categoryImg: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    },
+    {
 
-//       categoryName: 'Web Development',
-//       categoryImg: 'https://images.unsplash.com/photo-1571171637578-41bc2dd41cd2?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-//     },
-//     {
+      categoryName: 'Web Development',
+      categoryImg: 'https://images.unsplash.com/photo-1571171637578-41bc2dd41cd2?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    },
+    {
 
-//       categoryName: 'Android Development',
-//       categoryImg: 'https://images.unsplash.com/photo-1600087626120-062700394a01?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-//     },
-//     {
-//       categoryName: 'IOS Development',
-//       categoryImg: 'https://images.unsplash.com/photo-1600087626120-062700394a01?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-//     },
-//     {
-//       categoryName: 'Data Science',
-//       categoryImg: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-//     }
-//   ]});
+      categoryName: 'Android Development',
+      categoryImg: 'https://images.unsplash.com/photo-1600087626120-062700394a01?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    },
+    {
+      categoryName: 'IOS Development',
+      categoryImg: 'https://images.unsplash.com/photo-1600087626120-062700394a01?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    },
+    {
+      categoryName: 'Data Science',
+      categoryImg: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+    }
+  ]});
+}
 
-// }
+getCategory();
 getCourse();
-// getCategory();

@@ -513,7 +513,7 @@ module.exports = {
         },
       });
 
-      const totalCourses = courses.length;
+      const totalCourses = await prisma.course.count();
       const pagination = getPagination(req, totalCourses, Number(page), Number(limit));
 
       courses = courses.map((val) => {
