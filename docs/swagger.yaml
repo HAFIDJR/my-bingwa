@@ -2150,7 +2150,7 @@ paths:
                           tracking:
                             allOf:
                               - $ref: "#/components/schemas/TrackingModel"
-  /payments:
+  /payments: #update payment docs
     get:
       tags:
         - Payments
@@ -2182,25 +2182,8 @@ paths:
                             type: array
                             items:
                               allOf:
-                                - $ref: "#/components/schemas/PromotionModel"
-                                - type: object
-                                  properties:
-                                    user:
-                                      allOf:
-                                        - $ref: "#/components/schemas/UserModel"
-                                        - type: object
-                                          properties:
-                                            userProfile:
-                                              allOf:
-                                                - $ref: "#/components/schemas/UserProfileModel"
-                                    course:
-                                      allOf:
-                                        - $ref: "#/components/schemas/CourseModel"
-                                        - type: object
-                                          properties:
-                                            category:
-                                              allOf:
-                                                - $ref: "#/components/schemas/CategoryModel"
+                                - $ref: "#/components/schemas/PaymentHistoryModel"
+                                
   /payments/history:
     get:
       tags:
@@ -2227,17 +2210,8 @@ paths:
                             type: array
                             items:
                               allOf:
-                                - $ref: "#/components/schemas/PromotionModel"
-                                - type: object
-                                  properties:
-                                    course:
-                                      allOf:
-                                        - $ref: "#/components/schemas/CourseModel"
-                                        - type: object
-                                          properties:
-                                            category:
-                                              allOf:
-                                                - $ref: "#/components/schemas/CategoryModel"
+                                - $ref: "#/components/schemas/PaymentHistoryModel"
+                               
   /payments/{courseId}:
     get:
       tags:
@@ -2786,6 +2760,34 @@ components:
         chapterId:
           type: integer
           example: 1
+    PaymentHistoryModel :
+      title: Payments
+      type: object
+      properties:
+        id:
+          type: integer
+          example : 1
+        status:
+          type: string
+          example: "paid"
+        createdAt:
+          type: string
+          example:  "16 Desember 2023"
+        methodPayment:
+          type: string
+          example: "Bank Transfer"
+        course:
+          type: object
+          properties:
+            courseName:
+              type: string
+              example: "Belajar Website Dengan Figma"
+            category:
+              type: object
+              properties:
+                categoryName :
+                  type: string
+                  example: "UI-UX Design"
     EnrollmentModel:
       title: Enrollment
       type: object
@@ -3117,6 +3119,9 @@ components:
               courseId:
                 type: integer
                 example: 1
+              duration :
+                type: string
+                example : "90 menit"
     EditChapter:
       content:
         application/json:

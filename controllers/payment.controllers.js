@@ -19,7 +19,8 @@ module.exports = {
       if (createdAt !== undefined || updatedAt !== undefined) {
         return res.status(400).json({
           status: false,
-          message: "createdAt or updateAt cannot be provided during payment creation",
+          message:
+            "createdAt or updateAt cannot be provided during payment creation",
           data: null,
         });
       }
@@ -95,6 +96,7 @@ module.exports = {
           data: {
             userId: Number(req.user.id),
             courseId: Number(idCourse),
+            createAt: formattedDate(new Date()),
           },
         });
 
@@ -133,6 +135,7 @@ module.exports = {
           data: { newPayment },
         });
       } catch (err) {
+        console.log(err);
         res.status(400).json({
           status: false,
           message: "Error When Create Payment,make sure request is valid type",
@@ -232,13 +235,13 @@ module.exports = {
           },
         },
       });
-      payments = payments.map((val) => {
-        let localDate = new Date(val.createAt);
-        let timeString = localDate.toLocaleTimeString();
-        let dateString = localDate.toDateString();
-        val.createAt = `${dateString},${timeString}`;
-        return val;
-      });
+      // payments = payments.map((val) => {
+      //   let localDate = new Date(val.createAt);
+      //   let timeString = localDate.toLocaleTimeString();
+      //   let dateString = localDate.toDateString();
+      //   val.createAt = `${dateString},${timeString}`;
+      //   return val;
+      // });
 
       res.status(200).json({
         status: true,
@@ -301,12 +304,14 @@ module.exports = {
   createPaymentMidtrans: async (req, res, next) => {
     try {
       const courseId = req.params.courseId;
-      const { methodPayment, cardNumber, cvv, expiryDate } = req.body;
+      const { methodPayment, cardNumber, cvv, expiryDate, bankName } = req.body;
 
       let month = expiryDate.slice(0, 2);
       let year = expiryDate.slice(3);
 
-      const response = await axios.get(`https://api.sandbox.midtrans.com/v2/token?client_key=${PAYMENT_CLIENT_KEY}&card_number=${cardNumber}&card_cvv=${cvv}&card_exp_month=${month}&card_exp_year=${`20${year}`}`);
+      const response = await axios.get(
+        `https://api.sandbox.midtrans.com/v2/token?client_key=${PAYMENT_CLIENT_KEY}&card_number=${cardNumber}&card_cvv=${cvv}&card_exp_month=${month}&card_exp_year=${`20${year}`}`
+      );
 
       const token_id = response.data.token_id;
 
@@ -340,14 +345,9 @@ module.exports = {
       });
 
       let parameter = {
-        payment_type: "credit_card",
         transaction_details: {
-          order_id: 100 + newPayment.id,
+          order_id: newPayment.id,
           gross_amount: totalPrice,
-        },
-        credit_card: {
-          token_id: token_id,
-          authentication: true,
         },
         customer_details: {
           first_name: user.userProfile.fullName,
@@ -356,7 +356,83 @@ module.exports = {
         },
       };
 
+      if (methodPayment === "Credit Card") {
+        parameter.payment_type = "credit_card";
+        parameter.credit_card = {
+          token_id: token_id,
+          authentication: true,
+        };
+      }
+
+      if (methodPayment === "Bank Transfer") {
+        parameter.payment_type = "bank_transfer";
+        parameter.bank_transfer = {
+          bank: bankName,
+        };
+      }
+
+      if (methodPayment === "Mandiri Bill") {
+        parameter.payment_type = "echannel";
+        parameter.echannel = {
+          bill_info1: "Payment:",
+          bill_info2: "Online purchase",
+        };
+      }
+
+      if (methodPayment === "Permata") {
+        parameter.payment_type = "permata";
+      }
+
+      if (methodPayment === "Gopay") {
+        parameter.payment_type = "gopay";
+        parameter.gopay = {
+          enable_callback: true,
+          callback_url: "localhost:3000/payment-success",
+        };
+      }
+
       let transaction = await core.charge(parameter);
+
+      const html = await nodemailer.getHtml("transaction-succes.ejs", {
+        course: course.courseName,
+      });
+      nodemailer.sendEmail(req.user.email, "Email Transaction", html);
+
+      await prisma.enrollment.create({
+        data: {
+          userId: Number(req.user.id),
+          courseId: Number(courseId),
+        },
+      });
+
+      const lessons = await prisma.lesson.findMany({
+        where: {
+          chapter: {
+            courseId: Number(courseId),
+          },
+        },
+      });
+
+      await Promise.all(
+        lessons.map(async (lesson) => {
+          return prisma.tracking.create({
+            data: {
+              userId: Number(req.user.id),
+              lessonId: lesson.id,
+              status: false,
+              createdAt: formattedDate(new Date()),
+              updatedAt: formattedDate(new Date()),
+            },
+            include: {
+              lesson: {
+                select: {
+                  lessonName: true,
+                },
+              },
+            },
+          });
+        })
+      );
 
       res.status(201).json({
         status: true,
