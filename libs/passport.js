@@ -4,7 +4,8 @@ const { PrismaClient } = require("@prisma/client");
 const passport = require("passport");
 const prisma = new PrismaClient();
 
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } =
+  process.env;
 
 pasport.use(
   new GoogleStrategy(
@@ -22,17 +23,14 @@ pasport.use(
             email: profile.emails[0].value,
             isVerified: profile.emails[0].verified,
             googleId: profile.id,
+            userProfile: {
+              create: {
+                fullName: profile.displayName,
+                profilePicture: profile.photos[0].value,
+              },
+            },
           },
         });
-
-        let userProfile = await prisma.userProfile.create({
-          data: {
-            fullName: profile.displayName,
-            profilePicture: profile.photos[0].value,
-            userId: user.id,
-          },
-        });
-
         done(null, user);
       } catch (err) {
         done(err, null);
