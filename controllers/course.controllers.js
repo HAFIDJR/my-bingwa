@@ -349,6 +349,9 @@ module.exports = {
             },
           },
           enrollment: {
+            where:{
+              userId:Number(req.user.id)
+            },
             select: {
               id: true,
               progres: true,
@@ -419,6 +422,10 @@ module.exports = {
             },
           },
           enrollment: {
+            where:{
+              courseId:Number(idCourse),
+              userId:Number(req.user.id)
+            },
             select: {
               progres: true,
             },

@@ -57,6 +57,7 @@ module.exports = {
         data: {
           userId: Number(req.user.id),
           courseId: Number(courseId),
+          createAt: formattedDate(new Date()),
         },
       });
 
@@ -99,7 +100,8 @@ module.exports = {
           await prisma.notification.create({
             data: {
               title: "Reminder",
-              message: "You have incomplete lessons. Please continue your learning.",
+              message:
+                "You have incomplete lessons. Please continue your learning.",
               userId: Number(req.user.id),
               createdAt: formattedDate(new Date()),
             },
