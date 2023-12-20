@@ -3,31 +3,25 @@ const prisma = new PrismaClient();
 const jwt = require("jsonwebtoken");
 const { JWT_SECRET_KEY } = process.env;
 
-module.exports = function (req, res, next) {
-  let { authorization } = req.headers;
-  if (!authorization) {
-    return res.status(401).json({
-      status: false,
-      message: "Unauthorized",
-      err: "missing token on header!",
-      data: null,
-    });
-  }
-
-  const token = authorization.split("Bearer ")[1];
-
-  jwt.verify(token, JWT_SECRET_KEY, async (err, decoded) => {
-    if (err) {
+module.exports = async function (req, res, next) {
+  try {
+    let { authorization } = req.headers;
+    if (!authorization) {
       return res.status(401).json({
         status: false,
         message: "Unauthorized",
-        err: err.message,
+        err: "missing token on header!",
         data: null,
       });
     }
 
-    req.user = await prisma.user.findUnique({ where: { id: decoded.id } });
-    if (!req.user) {
+    const token = authorization.split("Bearer ")[1];
+
+    const payload = jwt.verify(token, JWT_SECRET_KEY);
+
+    const user = await prisma.user.findUnique({ where: { id: payload.id } });
+
+    if (!user) {
       return res.status(401).json({
         status: false,
         message: "unauthenticated",
@@ -35,6 +29,9 @@ module.exports = function (req, res, next) {
         data: null,
       });
     }
+
+    req.user = user;
+
     if (!req.user.isVerified) {
       return res.status(401).json({
         status: false,
@@ -45,5 +42,7 @@ module.exports = function (req, res, next) {
     }
 
     next();
-  });
+  } catch (err) {
+    next(err);
+  }
 };

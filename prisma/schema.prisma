@@ -13,21 +13,28 @@ datasource db {
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
-  email        String         @unique
-  password     String
-  otp          String
-  isVerified   Boolean        @default(false)
-  role         String         @default("user")
-  userProfile  UserProfile?
-  notification Notification[]
+  id                 Int            @id @default(autoincrement())
+  email              String         @unique
+  password           String?
+  otp                String?
+  otpCreatedAt       DateTime?
+  isVerified         Boolean        @default(false)
+  role               String         @default("user")
+  resetPasswordToken String?
+  googleId           String?
+  courses            Course[]       @relation("UserToCourse")
+  tracking           Tracking[]
+  userProfile        UserProfile?
+  notification       Notification[]
+  enrollment         Enrollment[]
+  payment            Payment[]
 }
 
 model UserProfile {
   id             Int     @id @default(autoincrement())
   profilePicture String?
   fullName       String
-  phoneNumber    String  @unique
+  phoneNumber    String? @unique
   city           String?
   country        String?
   userId         Int     @unique
@@ -37,14 +44,15 @@ model UserProfile {
 model Category {
   id           Int      @id @default(autoincrement())
   categoryName String   @unique
+  categoryImg  String?
   course       Course[]
 }
 
 model Course {
-  id               Int        @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   courseName       String
   price            Int
-  rating           Int
+  averageRating    Decimal?
   level            String
   aboutCourse      String
   targetAudience   String
@@ -54,48 +62,102 @@ model Course {
   videoURL         String
   forumURL         String
   duration         String
-  release          DateTime   @default(now())
-  lesson           Lesson[]
+  courseImg        String?
+  chapter          Chapter[]
+  enrollment       Enrollment[]
+  payment          Payment[]
+  user             User[]       @relation("UserToCourse")
+  createdAt        String
+  updatedAt        String
   categoryId       Int
-  category         Category   @relation(fields: [categoryId], references: [id])
+  category         Category     @relation(fields: [categoryId], references: [id])
   promotionId      Int?
-  promotion        Promotion? @relation(fields: [promotionId], references: [id])
-  createdAt        DateTime   @default(now())
+  promotion        Promotion?   @relation(fields: [promotionId], references: [id])
+  Tracking         Tracking[]
 }
 
 model Chapter {
   id        Int      @id @default(autoincrement())
   name      String
-  createdAt DateTime @default(now())
+  createdAt String
+  updatedAt String
+  duration  String   @default("0")
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id])
   lesson    Lesson[]
 }
 
 model Lesson {
-  id         Int      @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   lessonName String
   videoURL   String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
+  createdAt  String
+  updatedAt  String
   chapterId  Int
-  chapter    Chapter  @relation(fields: [chapterId], references: [id])
-  Course     Course?  @relation(fields: [courseId], references: [id])
-  courseId   Int?
+  tracking   Tracking[]
+  chapter    Chapter    @relation(fields: [chapterId], references: [id])
 }
 
 model Promotion {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   discount  Decimal
-  startDate DateTime?
-  endDate   DateTime?
+  startDate String
+  endDate   String
   course    Course[]
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   title     String
   message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isRead    Boolean @default(false)
+  createdAt String
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+}
+
+model Enrollment {
+  id       Int     @id @default(autoincrement())
+  createAt String
+  userId   Int?
+  user     User?   @relation(fields: [userId], references: [id])
+  courseId Int?
+  course   Course? @relation(fields: [courseId], references: [id])
+  progres  Decimal @default(0)
+  review   Review?
+}
+
+model Payment {
+  id            Int    @id @default(autoincrement())
+  amount        Int
+  status        String @default("Unpaid")
+  methodPayment String
+  createAt      String
+  updatedAt     String
+  userId        Int
+  user          User   @relation(fields: [userId], references: [id])
+  courseId      Int
+  course        Course @relation(fields: [courseId], references: [id])
+}
+
+model Tracking {
+  id        Int     @id @default(autoincrement())
+  status    Boolean @default(false)
+  createdAt String
+  updatedAt String
+  userId    Int?
+  user      User?   @relation(fields: [userId], references: [id])
+  lessonId  Int?
+  lesson    Lesson? @relation(fields: [lessonId], references: [id])
+  courseId  Int?
+  course    Course? @relation(fields: [courseId], references: [id])
+}
+
+model Review {
+  id           Int        @id @default(autoincrement())
+  userRating   Int
+  userComment  String?
+  createdAt    String
+  enrollmentId Int        @unique
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
 }

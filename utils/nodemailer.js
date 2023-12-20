@@ -1,3 +1,4 @@
+require("dotenv").config();
 const nodemailer = require("nodemailer");
 const { google } = require("googleapis");
 const ejs = require("ejs");
@@ -21,6 +22,7 @@ module.exports = {
 
     const transport = nodemailer.createTransport({
       service: "gmail",
+      port:465,
       auth: {
         type: "OAuth2",
         user: GOOGLE_SENDER_EMAIL,

@@ -1,19 +1,36 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const getPagination = require("../utils/getPaggination");
+const { getPagination } = require("../utils/getPaggination");
+const { formattedDate } = require("../utils/formattedDate");
 
 module.exports = {
   createCourse: async (req, res, next) => {
     try {
-      const { price, isPremium, categoryId, promotionId } = req.body;
+      const {
+        price,
+        isPremium,
+        categoryId,
+        promotionId,
+        averageRating,
+        createdAt,
+        updatedAt,
+      } = req.body;
 
-      if (!isPremium && price) {
+      if (
+        isPremium !== undefined ||
+        averageRating !== undefined ||
+        createdAt !== undefined ||
+        updatedAt !== undefined
+      ) {
         return res.status(400).json({
           status: false,
-          message: "free class price must be 0",
+          message:
+            "isPremium, averageRating, createdAt, or updateAt cannot be provided during course creation",
           data: null,
         });
       }
+
+      const updatedIsPremium = price > 0 ? true : false;
 
       let category = await prisma.category.findUnique({
         where: { id: Number(categoryId) },
@@ -44,6 +61,9 @@ module.exports = {
       let newCourse = await prisma.course.create({
         data: {
           ...req.body,
+          isPremium: updatedIsPremium,
+          createdAt: formattedDate(new Date()),
+          updatedAt: formattedDate(new Date()),
         },
       });
 
@@ -53,7 +73,6 @@ module.exports = {
         data: { newCourse },
       });
     } catch (err) {
-      console.log(err);
       next(err);
     }
   },
@@ -61,6 +80,10 @@ module.exports = {
   editCourse: async (req, res, next) => {
     try {
       const { idCourse } = req.params;
+
+      const { price, isPremium, averageRating, createdAt, updatedAt } =
+        req.body;
+
       const checkCourse = await prisma.course.findFirst({
         where: {
           id: Number(idCourse),
@@ -73,21 +96,39 @@ module.exports = {
           data: null,
         });
       }
-      let editCourse = await prisma.course.update({
+
+      if (
+        isPremium !== undefined ||
+        averageRating !== undefined ||
+        createdAt !== undefined ||
+        updatedAt !== undefined
+      ) {
+        return res.status(400).json({
+          status: false,
+          message:
+            "isPremium, averageRating, createdAt, or updateAt cannot be provided during course update",
+          data: null,
+        });
+      }
+
+      const updatedIsPremium = price > 0 ? true : false;
+
+      let editedCourse = await prisma.course.update({
         where: {
           id: Number(idCourse),
         },
         data: {
           ...req.body,
+          isPremium: updatedIsPremium,
+          updatedAt: formattedDate(new Date()),
         },
       });
       return res.status(200).json({
         status: true,
         message: "Update Kelas successful",
-        data: editCourse,
+        data: { editedCourse },
       });
     } catch (err) {
-      console.log(err);
       next(err);
     }
   },
@@ -95,7 +136,7 @@ module.exports = {
   deleteCourse: async (req, res, next) => {
     try {
       const { idCourse } = req.params;
-      let deleteCourse = await prisma.course.delete({
+      let deletedCourse = await prisma.course.delete({
         where: {
           id: Number(idCourse),
         },
@@ -103,7 +144,7 @@ module.exports = {
       res.status(200).json({
         status: true,
         message: "delete Kelas successful",
-        data: deleteCourse,
+        data: { deletedCourse },
       });
     } catch (err) {
       next(err);
@@ -125,58 +166,299 @@ module.exports = {
           data: null,
         });
       }
-      const detailCourse = await prisma.course.findUnique({
+      const course = await prisma.course.findUnique({
         where: {
           id: Number(idCourse),
         },
+        include: {
+          category: {
+            select: {
+              categoryName: true,
+            },
+          },
+          chapter: {
+            select: {
+              name: true,
+              duration: true,
+              lesson: {
+                select: {
+                  lessonName: true,
+                  videoURL: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+          enrollment: {
+            select: {
+              review: {
+                select: {
+                  userRating: true,
+                  userComment: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              chapter: true,
+            },
+          },
+        },
       });
+      // Modify object property count to modul
+      course["modul"] = course._count.chapter;
+      delete course["_count"];
       res.status(200).json({
         status: true,
         message: ` Detail Kelas with id:${idCourse} successful`,
-        data: detailCourse,
+        data: { course },
       });
     } catch (err) {
-      console.log(err);
       next(err);
     }
   },
-  showVidioByCourse: async (req, res, next) => {
+
+  getMyCourse: async (req, res, next) => {
+    try {
+      const { id } = req.user;
+      const {
+        search,
+        filter,
+        category,
+        level,
+        page = 1,
+        limit = 10,
+      } = req.query;
+
+      const countEnrollCourse = await prisma.course.count({
+        where: {
+          enrollment: {
+            some: {
+              userId: {
+                equals: Number(id),
+              },
+            },
+          },
+        },
+      });
+
+      const pagination = getPagination(
+        req,
+        countEnrollCourse,
+        Number(page),
+        Number(limit)
+      );
+
+      let coursesQuery = {
+        where: {},
+      };
+
+      if (search) {
+        coursesQuery.where.OR = [
+          { courseName: { contains: search, mode: "insensitive" } },
+          { mentor: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (filter) {
+        coursesQuery.orderBy = [];
+        if (filter.includes("newest")) {
+          coursesQuery.orderBy.push({ createdAt: "desc" });
+        }
+        if (filter.includes("populer")) {
+          coursesQuery.orderBy.push({ averageRating: "desc" });
+        }
+        if (filter.includes("promo")) {
+          coursesQuery.where.promotionId = { not: null };
+        }
+      }
+
+      if (category) {
+        const categories = Array.isArray(category)
+          ? category.map((c) => c.toLowerCase())
+          : [category.toLowerCase()];
+        coursesQuery.where.category = {
+          categoryName: { in: categories, mode: "insensitive" },
+        };
+      }
+
+      if (level) {
+        const levels = Array.isArray(level) ? level : [level];
+        coursesQuery.where.level = { in: levels };
+      }
+      let courseNotEnrol = await prisma.course.findMany({
+        where: {
+          enrollment: {
+            none: {
+              userId: {
+                equals: Number(id),
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          courseName: true,
+          mentor: true,
+          averageRating: true,
+          duration: true,
+          level: true,
+          price: true,
+          category: {
+            select: {
+              id: true,
+              categoryName: true,
+            },
+          },
+          _count: {
+            select: {
+              chapter: true,
+            },
+          },
+        },
+      });
+
+      let course = await prisma.course.findMany({
+        skip: (Number(page) - 1) * Number(limit),
+        take: Number(limit),
+        where: {
+          enrollment: {
+            some: {
+              userId: {
+                equals: Number(id),
+              },
+            },
+          },
+          ...coursesQuery.where,
+        },
+        select: {
+          id: true,
+          courseName: true,
+          mentor: true,
+          averageRating: true,
+          duration: true,
+          level: true,
+          price: true,
+          isPremium: true,
+          category: {
+            select: {
+              id: true,
+              categoryName: true,
+            },
+          },
+          enrollment: {
+            where:{
+              userId:Number(req.user.id)
+            },
+            select: {
+              id: true,
+              progres: true,
+            },
+          },
+          _count: {
+            select: {
+              chapter: true,
+            },
+          },
+        },
+      });
+
+      // Modify object property count to modul
+      course = course.map((val) => {
+        val["modul"] = val._count.chapter;
+        delete val["_count"];
+        return val;
+      });
+      courseNotEnrol = courseNotEnrol.map((val) => {
+        val["modul"] = val._count.chapter;
+        delete val["_count"];
+        return val;
+      });
+      res.json({
+        status: true,
+        message: "Success",
+        data: { course, pagination },
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  },
+  detailMyCourse: async (req, res, next) => {
     try {
       const { idCourse } = req.params;
-      const findCourse = await prisma.course.findFirst({
+      const findCourse = await prisma.enrollment.findFirst({
         where: {
-          id: Number(idCourse),
+          courseId: Number(idCourse),
+          userId: req.user.id,
         },
       });
       if (!findCourse) {
-        return res.status(404).json({
+        return res.status(400).json({
           status: false,
-          message: `Course Not Found With Id ${idCourse}`,
+          message: "You Not Enroll this course ",
           data: null,
         });
       }
-
-      let filterVidio = await prisma.vidio.findMany({
+      const course = await prisma.course.findFirst({
         where: {
-          idCourse,
-        },
-        include: {
-          Course: {
-            select: {
-              courseName: true,
+          enrollment: {
+            some: {
+              userId: {
+                equals: Number(req.user.id),
+              },
+              courseId: {
+                equals: Number(idCourse),
+              },
             },
           },
-          Chapter: {
+        },
+        include: {
+          category: {
+            select: {
+              categoryName: true,
+            },
+          },
+          enrollment: {
+            where:{
+              courseId:Number(idCourse),
+              userId:Number(req.user.id)
+            },
+            select: {
+              progres: true,
+            },
+          },
+          chapter: {
             select: {
               name: true,
+              lesson: {
+                include: {
+                  tracking: {
+                    select: {
+                      status: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              chapter: true,
             },
           },
         },
       });
+      // Modify object property count to modul
+      course["modul"] = course._count.chapter;
+      delete course["_count"];
+
       res.status(200).json({
         status: true,
-        message: "Show All Vidio in Course ",
-        data: filterVidio,
+        message: "Succes to Show detail Course",
+        data: course,
       });
     } catch (err) {
       next(err);
@@ -184,72 +466,130 @@ module.exports = {
   },
   getCourse: async (req, res, next) => {
     try {
-      const {filter, category, level} = req.query
-      if(filter || category || level){
+      const {
+        search,
+        filter,
+        category,
+        level,
+        page = 1,
+        limit = 10,
+      } = req.query;
 
-        const filterOptions = {
-          populer: { orderBy: { rating: 'desc' } },
-        terbaru: { orderBy: { release: 'desc' } },
-        promo: { where: { promotionId: { not: null } } },
+      let coursesQuery = {
+        where: {},
       };
-      console.log(typeof category === "string")
-      const query = {
-        ...filterOptions[filter],
-        where: {
-          category: {
 
-            categoryName: typeof category !== "string" ? {in: [...category]} : {in: [category]} ,
-          },
-          ...(level && {level: level})
-        },
+      if (search) {
+        coursesQuery.where.OR = [
+          { courseName: { contains: search, mode: "insensitive" } },
+          { mentor: { contains: search, mode: "insensitive" } },
+        ];
       }
-      const courses = await prisma.course.findMany(query);
-      
-      res.status(200).json({
-        status: true,
-        message: "Get Course Success",
-        data: courses
-      });
-    }else if(req.query.search){
-      const {search} = req.query
-      const courses = await prisma.course.findMany({
-        where: {
-          courseName: {
-            contains: search,
-            mode: "insensitive"
-          }
+
+      if (filter) {
+        coursesQuery.orderBy = [];
+        if (filter.includes("newest")) {
+          coursesQuery.orderBy.push({ createdAt: "desc" });
         }
-      })
+        if (filter.includes("populer")) {
+          coursesQuery.orderBy.push({ averageRating: "desc" });
+        }
+        if (filter.includes("promo")) {
+          coursesQuery.where.promotionId = { not: null };
+        }
+        if (filter.includes("premium")) {
+          coursesQuery.where.isPremium = true;
+        }
+        if (filter.includes("free")) {
+          coursesQuery.where.isPremium = false;
+        }
+      }
 
-      res.status(200).json({
-        status: true,
-        message: "Get Course Success",
-        data: courses
-      });
-    } else {
-      const { limit = 10, page = 1 } = req.query;
-      console.log(limit);
+      if (category) {
+        const categories = Array.isArray(category)
+          ? category.map((c) => c.toLowerCase())
+          : [category.toLowerCase()];
+        coursesQuery.where.category = {
+          categoryName: { in: categories, mode: "insensitive" },
+        };
+      }
 
-      const courses = await prisma.course.findMany({
+      if (level) {
+        const levels = Array.isArray(level) ? level : [level];
+        coursesQuery.where.level = { in: levels };
+      }
+
+      let courses = await prisma.course.findMany({
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
+        where: coursesQuery.where,
+        orderBy: coursesQuery.orderBy,
+        include: {
+          promotion: {
+            select: {
+              discount: true,
+              startDate: true,
+              endDate: true,
+            },
+          },
+          category: {
+            select: {
+              categoryName: true,
+            },
+          },
+          _count: {
+            select: {
+              chapter: true,
+              enrollment: {
+                include: {
+                  _count: {
+                    select: {
+                      review: {
+                        select: {
+                          id: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          enrollment: {
+            select: {
+              review: {
+                select: {
+                  userRating: true,
+                  userComment: true,
+                  createdAt: true,
+                },
+              },
+            },
+          },
+        },
       });
 
-      const { _count } = await prisma.course.aggregate({
-        _count: { id: true },
+      const totalCourses = await prisma.course.count({
+        where: coursesQuery.where,
+      });
+      const pagination = getPagination(req, totalCourses, Number(page), Number(limit));
+
+      courses = courses.map((val) => {
+        val["modul"] = val._count.chapter;
+        val["totalReviews"] = val.enrollment.reduce((sum, enrollment) => {
+          return sum + (enrollment.review ? 1 : 0);
+        }, 0);
+        delete val["_count"];
+        return val;
       });
 
-      const paggination = getPagination(req, _count.id, Number(page), Number(limit));
-
-      res.status(200).json({
+      return res.status(200).json({
         status: true,
-        message: "Show All Kelas successful",
-        data: { paggination, courses },
+        message: "Courses retrieved successfully",
+        data: { pagination, courses },
       });
-    }
-    } catch (error) {
-      console.log(error.message)
-      next(error);
+    } catch (err) {
+      next(err);
     }
   },
 };

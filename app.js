@@ -4,6 +4,7 @@ const app = express();
 const morgan = require("morgan");
 const cors = require("cors");
 const { PORT = 3000 } = process.env;
+
 const router = require("./routes");
 
 app.use(cors());
@@ -11,11 +12,8 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
-app.get("/", (req, res) => {
-  res.send("Welcome To Bingwa API ");
-});
-app.use(router);
 
+app.use(router);
 
 // 404 error handling
 app.use((req, res, next) => {
@@ -30,7 +28,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   res.status(500).json({
     status: false,
-    message: err.message || "Internal Server Error",
+    message: err.message ?? "Internal Server Error",
     data: null,
   });
 });

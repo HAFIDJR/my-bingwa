@@ -1,20 +1,41 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { formattedDate } = require("../utils/formattedDate");
 
 const createChapter = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, courseId, duration, createdAt, updatedAt } = req.body;
 
-    const chapter = await prisma.chapter.create({
+    if (!name || !courseId || !duration) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide name, courseId, and duration",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during chapter creation",
+        data: null,
+      });
+    }
+
+    const newChapter = await prisma.chapter.create({
       data: {
         name,
+        courseId,
+        duration,
+        createdAt: formattedDate(new Date()),
+        updatedAt: formattedDate(new Date()),
       },
     });
 
     res.status(201).json({
       status: true,
       message: "Create Chapter Success",
-      data: chapter,
+      data: { newChapter },
     });
   } catch (error) {
     next(error);
@@ -23,15 +44,45 @@ const createChapter = async (req, res, next) => {
 
 const getChapters = async (req, res, next) => {
   try {
-    const chapters = await prisma.chapter.findMany();
+    const { search } = req.query;
+
+    const chapters = await prisma.chapter.findMany({
+      where: {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { lesson: { some: { lessonName: { contains: search, mode: "insensitive" } } } },
+          { course: { courseName: { contains: search, mode: "insensitive" } } },
+          { course: { category: { categoryName: { contains: search, mode: "insensitive" } } } },
+        ],
+      },
+      include: {
+        course: {
+          select: {
+            courseName: true,
+            category: {
+              select: {
+                categoryName: true,
+              },
+            },
+          },
+        },
+        lesson: {
+          select: {
+            lessonName: true,
+            videoURL: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
 
     res.status(200).json({
       status: true,
       message: "Get chapters success",
-      data: chapters,
+      data: { chapters },
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -43,26 +94,49 @@ const getChapterById = async (req, res, next) => {
       where: {
         id: Number(id),
       },
+      include: {
+        lesson: {
+          select: {
+            lessonName: true,
+            videoURL: true,
+            createdAt: true,
+          },
+        },
+      },
     });
 
-    if (!chapter)
-      return res
-        .status(404)
-        .json({ status: false, message: "chapter not found", data: null });
+    if (!chapter) return res.status(404).json({ status: false, message: "chapter not found", data: null });
 
-    res.status(201).json({
+    res.status(200).json({
       status: true,
       message: "Get Detail chapter succes",
-      data: chapter,
+      data: { chapter },
     });
   } catch (error) {
     next(error);
   }
 };
 
-const updateCHapter = async (req, res, next) => {
+const updateChapter = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { name, courseId, duration, createdAt, updatedAt } = req.body;
+
+    if (!name || !courseId || !duration) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide name, courseId, and duration",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during chapter update",
+        data: null,
+      });
+    }
 
     const isExistChapter = await prisma.chapter.findUnique({
       where: {
@@ -70,24 +144,22 @@ const updateCHapter = async (req, res, next) => {
       },
     });
 
-    if (!isExistChapter)
-      return res
-        .status(404)
-        .json({ status: false, message: "chapter not found", data: null });
+    if (!isExistChapter) return res.status(404).json({ status: false, message: "chapter not found", data: null });
 
-    const chapter = await prisma.chapter.update({
+    const updatedChapter = await prisma.chapter.update({
       where: {
         id: Number(id),
       },
       data: {
         ...req.body,
+        updatedAt: formattedDate(new Date()),
       },
     });
 
     res.status(200).json({
       status: true,
       message: "Chapter updated success",
-      data: chapter,
+      data: { updatedChapter },
     });
   } catch (error) {
     next(error);
@@ -104,12 +176,9 @@ const deleteChapter = async (req, res, next) => {
       },
     });
 
-    if (!isExistChapter)
-      return res
-        .status(404)
-        .json({ status: false, message: "chapter not found", data: null });
+    if (!isExistChapter) return res.status(404).json({ status: false, message: "chapter not found", data: null });
 
-    await prisma.chapter.delete({
+    const deletedChapter = await prisma.chapter.delete({
       where: {
         id: Number(id),
       },
@@ -118,6 +187,7 @@ const deleteChapter = async (req, res, next) => {
     res.status(200).json({
       status: true,
       message: "Delete chpater success",
+      data: { deletedChapter },
     });
   } catch (error) {
     next(error);
@@ -128,6 +198,6 @@ module.exports = {
   createChapter,
   getChapters,
   getChapterById,
-  updateCHapter,
+  updateChapter,
   deleteChapter,
 };

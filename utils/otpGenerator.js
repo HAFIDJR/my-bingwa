@@ -5,6 +5,6 @@ module.exports = {
     for (let i = 1; i <= 6; i++) {
       otp += digit[Math.floor(Math.random() * 10)];
     }
-    return otp;
+    return { code: otp, createdAt: new Date() };
   },
 };

@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { formattedDate } = require("../utils/formattedDate");
 
 const findChapterById = async (chapterId) => {
   return await prisma.chapter.findUnique({
@@ -22,7 +23,23 @@ const findLessonById = async (lessonId) => {
 
 const createLesson = async (req, res, next) => {
   try {
-    const { lessonName, videoURL, chapterId, courseId } = req.body;
+    const { lessonName, videoURL, chapterId, createdAt, updatedAt } = req.body;
+
+    if (!lessonName || !videoURL || !chapterId) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide lessonName, videoURL, and chapterId",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during lesson creation",
+        data: null,
+      });
+    }
 
     const chapter = await findChapterById(chapterId);
 
@@ -34,14 +51,51 @@ const createLesson = async (req, res, next) => {
       });
     }
 
-    const newLesson = await prisma.lesson.create({
-      data: { lessonName, videoURL, chapterId, courseId },
+    const users = await prisma.user.findMany();
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        userId: { in: users.map((user) => user.id) },
+        courseId: chapter.courseId,
+      },
     });
+    const newLesson = await prisma.lesson.create({
+      data: {
+        lessonName,
+        videoURL,
+        chapterId,
+        createdAt: formattedDate(new Date()),
+        updatedAt: formattedDate(new Date()),
+      },
+    });
+
+    // menambahkan fitur update progres jika sudah enrol course
+    const trackingRecords = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        return prisma.tracking.create({
+          data: {
+            userId: Number(enrollment.userId),
+            lessonId: Number(newLesson.id),
+            courseId: Number(chapter.courseId),
+            status: false,
+            createdAt: formattedDate(new Date()),
+            updatedAt: formattedDate(new Date()),
+          },
+          include: {
+            lesson: {
+              select: {
+                lessonName: true,
+              },
+            },
+          },
+        });
+      })
+    );
 
     res.status(201).json({
       status: true,
       message: "Lesson created successfully",
-      data: { newLesson },
+      data: { newLesson, trackingRecords },
     });
   } catch (err) {
     next(err);
@@ -50,11 +104,43 @@ const createLesson = async (req, res, next) => {
 
 const getAllLessons = async (req, res, next) => {
   try {
+    const { search } = req.query;
+
     const lessons = await prisma.lesson.findMany({
+      where: {
+        OR: [
+          { lessonName: { contains: search, mode: "insensitive" } },
+          { chapter: { name: { contains: search, mode: "insensitive" } } },
+          {
+            chapter: {
+              course: { courseName: { contains: search, mode: "insensitive" } },
+            },
+          },
+          {
+            chapter: {
+              course: {
+                category: {
+                  categoryName: { contains: search, mode: "insensitive" },
+                },
+              },
+            },
+          },
+        ],
+      },
       include: {
         chapter: {
           select: {
             name: true,
+            course: {
+              select: {
+                courseName: true,
+                category: {
+                  select: {
+                    categoryName: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -97,7 +183,23 @@ const getDetailLesson = async (req, res, next) => {
 const updateDetailLesson = async (req, res, next) => {
   try {
     const lessonId = req.params.id;
-    const { lessonName, videoURL, chapterId, courseId } = req.body;
+    const { lessonName, videoURL, chapterId, createdAt, updatedAt } = req.body;
+
+    if (!lessonName || !videoURL || !chapterId) {
+      return res.status(400).json({
+        status: false,
+        message: "Please provide lessonName, videoURL, and chapterId",
+        data: null,
+      });
+    }
+
+    if (createdAt !== undefined || updatedAt !== undefined) {
+      return res.status(400).json({
+        status: false,
+        message: "createdAt or updateAt cannot be provided during lesson update",
+        data: null,
+      });
+    }
 
     const lesson = await findLessonById(lessonId);
 
@@ -125,8 +227,7 @@ const updateDetailLesson = async (req, res, next) => {
         lessonName,
         videoURL,
         chapterId,
-        courseId,
-        updatedAt: new Date(),
+        updatedAt: formattedDate(new Date()),
       },
     });
 
@@ -168,57 +269,54 @@ const deleteLessonById = async (req, res, next) => {
   }
 };
 
-const searchLesson = async (req, res, next) => {
+const filterLesson = async (req, res, next) => {
   try {
-    const { chapter, lessonName, course } = req.query;
-    if (chapter || title || course) {
+    const { chapter, lesson, course } = req.query;
+    if (chapter || lesson || course) {
       let filterLesson = await prisma.lesson.findMany({
         where: {
           OR: [
             {
               lessonName: {
-                contains: lessonName || "a",
+                contains: lesson,
                 mode: "insensitive",
               },
             },
-          ],
-          chapter: {
-            OR: [
-              {
+            {
+              chapter: {
                 name: {
-                  contains: chapter || "a", //adakah solusi lebih clean untuk query filter chapter ?
+                  contains: chapter,
                   mode: "insensitive",
                 },
               },
-            ],
-          },
-          Course: {
-            OR: [
-              {
-                courseName: {
-                  contains: course || "a",
-                  mode: "insensitive",
+            },
+            {
+              chapter: {
+                course: {
+                  courseName: {
+                    contains: course,
+                    mode: "insensitive",
+                  },
                 },
               },
-            ],
-          },
+            },
+          ],
         },
         include: {
           chapter: {
-            select: {
-              name: true,
-            },
-          },
-          Course: {
-            select: {
-              courseName: true,
+            include: {
+              course: {
+                select: {
+                  courseName: true,
+                },
+              },
             },
           },
         },
       });
       return res.status(200).json({
         status: true,
-        message: "Succes Filter Or Search Vidio",
+        message: "Success Filter Or Search Video",
         data: filterLesson,
       });
     }
@@ -232,11 +330,52 @@ const searchLesson = async (req, res, next) => {
   }
 };
 
+async function showLessonByCourse(req, res, next) {
+  try {
+    const { idCourse } = req.params;
+    const findCourse = await prisma.course.findFirst({
+      where: {
+        id: Number(idCourse),
+      },
+    });
+    if (!findCourse) {
+      return res.status(404).json({
+        status: false,
+        message: `Course Not Found With Id ${idCourse}`,
+        data: null,
+      });
+    }
+
+    let filterLesson = await prisma.chapter.findMany({
+      where: {
+        courseId: Number(idCourse),
+      },
+      include: {
+        lesson: {
+          select: {
+            lessonName: true,
+            videoURL: true,
+          },
+        },
+      },
+    });
+    res.status(200).json({
+      status: true,
+      message: "Show All Vidio in Course",
+      data: filterLesson,
+    });
+  } catch (err) {
+    console.log(err);
+    next(err);
+  }
+}
+
 module.exports = {
   createLesson,
   getAllLessons,
   getDetailLesson,
   updateDetailLesson,
   deleteLessonById,
-  searchLesson,
+  filterLesson,
+  showLessonByCourse,
 };
